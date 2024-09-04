@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model ambiente {
+  ambiente_id                  Int                            @id @default(autoincrement())
+  ambiente_descricao           String?                        @db.VarChar(45)
+  ambiente_andar               Int
+  ambiente_tipo                String?                        @db.VarChar(45)
+  ambiente_numero_pcs          Int?
+  ambiente_capacidade          Int?
+  ambiente_status              Int?
+  dias_sem_alocacao            dias_sem_alocacao[]
+  planejamento_alocacao        planejamento_alocacao[]
+  registro_utilizacao_ambiente registro_utilizacao_ambiente[]
+}
+
+model dias_sem_alocacao {
+  dias_sem_alocacao_id             Int       @id @default(autoincrement())
+  dias_sem_alocacao_data           DateTime? @db.Date
+  dias_sem_alocacao_dia_semana     Int?
+  dias_sem_alocacao_horario_inicio DateTime? @db.Time(0)
+  dias_sem_alocacao_horario_fim    DateTime? @db.Time(0)
+  dias_sem_alocacao_status         Int?
+  ambiente_id                      Int?
+  ambiente                         ambiente? @relation(fields: [ambiente_id], references: [ambiente_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_dias_sem_alocacao_ambiente1")
+
+  @@index([ambiente_id], map: "fk_dias_sem_alocacao_ambiente1_idx")
+}
+
+model planejamento_alocacao {
+  planejamento_alocacao_id          Int                            @id @default(autoincrement())
+  planejamento_alocacao_data        DateTime?                      @db.Date
+  planejamento_alocacao_hora_inicio DateTime?                      @db.Time(0)
+  planejamento_alocacao_hora_fim    DateTime?                      @db.Time(0)
+  planejamento_alocacao_observacao  String?                        @db.VarChar(300)
+  planejamento_alocacao_status      Int?
+  ambiente_id                       Int
+  usuario_id                        Int
+  reserva_alocacao_id               Int?
+  ambiente                          ambiente                       @relation(fields: [ambiente_id], references: [ambiente_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_planejamento_alocacao_ambiente1")
+  reserva_alocacao                  reserva_alocacao?              @relation(fields: [reserva_alocacao_id], references: [reserva_alocacao_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_planejamento_alocacao_reserva_alocacao1")
+  usuario                           usuario                        @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_planejamento_alocacao_usuario1")
+  registro_utilizacao_ambiente      registro_utilizacao_ambiente[]
+
+  @@index([ambiente_id], map: "fk_planejamento_alocacao_ambiente1_idx")
+  @@index([reserva_alocacao_id], map: "fk_planejamento_alocacao_reserva_alocacao1_idx")
+  @@index([usuario_id], map: "fk_planejamento_alocacao_usuario1_idx")
+}
+
+model registro_utilizacao_ambiente {
+  registro_utilizacao_ambiente_id                                    Int                    @id @default(autoincrement())
+  registro_utilizacao_ambiente_hora_entrada                          DateTime?              @db.DateTime(0)
+  registro_utilizacao_ambiente_hora_saida                            DateTime?              @db.DateTime(0)
+  registro_utilizacao_ambiente_status                                Int?
+  registro_utilizacao_ambiente_observacao                            String?                @db.VarChar(400)
+  planejamento_alocacao_id                                           Int?
+  usuario_id_retirada                                                Int
+  usuario_id_devolucao                                               Int?
+  ambiente_id                                                        Int
+  ambiente                                                           ambiente               @relation(fields: [ambiente_id], references: [ambiente_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_registro_utilizacao_ambiente_ambiente1")
+  planejamento_alocacao                                              planejamento_alocacao? @relation(fields: [planejamento_alocacao_id], references: [planejamento_alocacao_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_registro_utilizacao_ambiente_planejamento_alocacao1")
+  usuario_registro_utilizacao_ambiente_usuario_id_retiradaTousuario  usuario                @relation("registro_utilizacao_ambiente_usuario_id_retiradaTousuario", fields: [usuario_id_retirada], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_registro_utilizacao_ambiente_usuario1")
+  usuario_registro_utilizacao_ambiente_usuario_id_devolucaoTousuario usuario?               @relation("registro_utilizacao_ambiente_usuario_id_devolucaoTousuario", fields: [usuario_id_devolucao], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_registro_utilizacao_ambiente_usuario2")
+
+  @@index([ambiente_id], map: "fk_registro_utilizacao_ambiente_ambiente1_idx")
+  @@index([planejamento_alocacao_id], map: "fk_registro_utilizacao_ambiente_planejamento_alocacao1_idx")
+  @@index([usuario_id_retirada], map: "fk_registro_utilizacao_ambiente_usuario1_idx")
+  @@index([usuario_id_devolucao], map: "fk_registro_utilizacao_ambiente_usuario2_idx")
+}
+
+model reserva {
+  id             BigInt    @id @default(autoincrement())
+  fim            DateTime? @db.DateTime(6)
+  inicio         DateTime? @db.DateTime(6)
+  reservado_para String?   @db.VarChar(255)
+  sala_id        BigInt?
+}
+
+model reserva_alocacao {
+  reserva_alocacao_id            Int                     @id @default(autoincrement())
+  reserva_alocacao_justificativa String?                 @db.VarChar(300)
+  reserva_alocacao_data          DateTime?               @db.Date
+  reserva_alocacao_hora_inicio   DateTime?               @db.Time(0)
+  reserva_alocacao_hora_fim      DateTime?               @db.Time(0)
+  reserva_alocacao_status        Int?
+  usuario_id                     Int
+  planejamento_alocacao          planejamento_alocacao[]
+  usuario                        usuario                 @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reserva_alocacao_usuario1")
+
+  @@index([usuario_id], map: "fk_reserva_alocacao_usuario1_idx")
+}
+
+model sala {
+  id         BigInt  @id @default(autoincrement())
+  bloco      String? @db.VarChar(255)
+  capacidade Int?
+  nome       String? @db.VarChar(255)
+}
+
+model usuario {
+  usuario_id                                                                              Int                            @id @default(autoincrement())
+  usuario_nome                                                                            String?                        @db.VarChar(300)
+  usuario_matricula                                                                       String?                        @db.VarChar(45)
+  usuario_tipo                                                                            Int?
+  usuario_status                                                                          Int                            @default(0)
+  usuario_log_data_criacao                                                                DateTime                       @db.DateTime(0)
+  usuario_lod_responsavel_id                                                              Int?
+  planejamento_alocacao                                                                   planejamento_alocacao[]
+  registro_utilizacao_ambiente_registro_utilizacao_ambiente_usuario_id_retiradaTousuario  registro_utilizacao_ambiente[] @relation("registro_utilizacao_ambiente_usuario_id_retiradaTousuario")
+  registro_utilizacao_ambiente_registro_utilizacao_ambiente_usuario_id_devolucaoTousuario registro_utilizacao_ambiente[] @relation("registro_utilizacao_ambiente_usuario_id_devolucaoTousuario")
+  reserva_alocacao                                                                        reserva_alocacao[]
+  usuario                                                                                 usuario?                       @relation("usuarioTousuario", fields: [usuario_lod_responsavel_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_usuario")
+  other_usuario                                                                           usuario[]                      @relation("usuarioTousuario")
+
+  @@index([usuario_lod_responsavel_id], map: "fk_usuario_usuario_idx")
+}
